@@ -15,6 +15,7 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
+from math import inf, sqrt
 
 from game import Agent
 
@@ -70,11 +71,50 @@ class ReflexAgent(Agent):
         successorGameState = currentGameState.generatePacmanSuccessor(action)
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
+        currFood = currentGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # print(successorGameState)
+        # print(newPos)
+        # print(newFood)
+        # print(newGhostStates)
+        # print(newScaredTimes)
+        score = 0
+        # Check lose
+        if successorGameState.isLose():
+            return -inf
+
+        # Check ghost
+        min_ghost_dis = inf
+        for ghost in newGhostStates:
+            ghost_dis = manhattanDistance(ghost.getPosition(), newPos)
+            if ghost_dis < min_ghost_dis:
+                min_ghost_dis = ghost_dis
+        if min_ghost_dis < 2 and action == 'Stop':
+            return -inf
+        score += sqrt(min_ghost_dis)
+
+        # Check Food
+        min_food_dis = inf
+        newFood = newFood.asList()
+        currFood = currFood.asList()
+        for food_pos in newFood:
+            food_dis = manhattanDistance(food_pos, newPos)
+            if food_dis < min_food_dis:
+                min_food_dis = food_dis
+        score -= min_food_dis
+        if newPos in currFood:
+            return inf
+
+        # Check Scare time
+        scare_time = 0
+        for t in newScaredTimes:
+            scare_time += t
+        score += scare_time
+
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
