@@ -175,7 +175,32 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        numAgents = gameState.getNumAgents()
+
+        def DFMiniMax(state, depth=self.depth, curr=0):
+            best_move = "Stop"
+            if depth == 0 or state.isWin() or state.isLose():
+                return best_move, self.evaluationFunction(state)
+            if curr == numAgents:
+                curr = 0
+            if curr == 0:
+                # Pacman
+                value = -inf
+                depth -= 1
+            else:
+                # Ghost
+                value = inf
+            for move in gameState.getLegalActions(curr):
+                nxt_pos = state.generateSuccessor(curr, move)
+                nxt_move, nxt_val = DFMiniMax(nxt_pos, depth, curr+1)
+                if curr == 0 and value < nxt_val:
+                    value, best_move = nxt_val, move
+                elif curr >= 1 and value > nxt_val:
+                    value, best_move = nxt_val, move
+            return best_move, value
+
+        return DFMiniMax(gameState)[0]
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
