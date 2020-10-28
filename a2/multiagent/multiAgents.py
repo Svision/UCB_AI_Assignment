@@ -179,41 +179,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         numAgents = gameState.getNumAgents()
 
-        def DFMiniMax(state, depth=self.depth, curr=-1):
-            best_move = None
-            curr += 1
-            agentIndex = curr % numAgents
-            if depth*numAgents == curr or state.isLose() or state.isWin():
-                return "Stop", self.evaluationFunction(state)
-            if agentIndex == 0:
-                # Pacman
-                value = -inf
-            else:
-                # Ghost
-                value = inf
-            for move in state.getLegalActions(agentIndex):
-                nxt_state = state.generateSuccessor(agentIndex, move)
-                nxt_move, nxt_value = DFMiniMax(nxt_state, depth, curr)
-                if agentIndex == 0 and value < nxt_value:
-                    value, best_move = nxt_value, move
-                if agentIndex >= 1 and value > nxt_value:
-                    value, best_move = nxt_value, move
-            return best_move, value
-
-        return DFMiniMax(gameState)[0]
-
-class AlphaBetaAgent(MultiAgentSearchAgent):
-    """
-    Your minimax agent with alpha-beta pruning (question 3)
-    """
-
-    def getAction(self, gameState):
-        """
-        Returns the minimax action using self.depth and self.evaluationFunction
-        """
-        "*** YOUR CODE HERE ***"
-        numAgents = gameState.getNumAgents()
-
         def DFMiniMax(state, curr=-1):
             best_move = None
             curr += 1
@@ -236,6 +201,49 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return best_move, value
 
         return DFMiniMax(gameState)[0]
+
+class AlphaBetaAgent(MultiAgentSearchAgent):
+    """
+    Your minimax agent with alpha-beta pruning (question 3)
+    """
+
+    def getAction(self, gameState):
+        """
+        Returns the minimax action using self.depth and self.evaluationFunction
+        """
+        "*** YOUR CODE HERE ***"
+        numAgents = gameState.getNumAgents()
+
+        def AlphaBeta(state, alpha, beta, curr=-1):
+            best_move = None
+            curr += 1
+            agentIndex = curr % numAgents
+            if self.depth * numAgents == curr or state.isLose() or state.isWin():
+                return "Stop", self.evaluationFunction(state)
+            if agentIndex == 0:
+                # Pacman
+                value = -inf
+            else:
+                # Ghost
+                value = inf
+            for move in state.getLegalActions(agentIndex):
+                nxt_state = state.generateSuccessor(agentIndex, move)
+                nxt_move, nxt_value = AlphaBeta(nxt_state, alpha, beta, curr)
+                if agentIndex == 0:
+                    if value < nxt_value:
+                        value, best_move = nxt_value, move
+                    if value >= beta:
+                        return best_move, value
+                    alpha = max(alpha, value)
+                if agentIndex >= 1:
+                    if value > nxt_value:
+                        value, best_move = nxt_value, move
+                    if value <= alpha:
+                        return best_move, value
+                    beta = min(beta, value)
+            return best_move, value
+
+        return AlphaBeta(gameState, -inf, inf)[0]
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
