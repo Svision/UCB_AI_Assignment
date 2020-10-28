@@ -179,30 +179,28 @@ class MinimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         numAgents = gameState.getNumAgents()
 
-        def DFMiniMax(state, depth=self.depth, curr=0):
+        def DFMiniMax(state, depth=self.depth, curr=-1):
             best_move = None
-            if depth == 0 or state.isWin() or state.isLose():
+            curr += 1
+            agentIndex = curr % numAgents
+            if depth*numAgents == curr or state.isLose() or state.isWin():
                 return "Stop", self.evaluationFunction(state)
-            if curr % numAgents == 0:
-                curr = 0
-            if curr == 0:
+            if agentIndex == 0:
                 # Pacman
                 value = -inf
-                depth -= 1
             else:
                 # Ghost
                 value = inf
-            for move in gameState.getLegalActions(curr):
-                nxt_pos = state.generateSuccessor(curr, move)
-                nxt_move, nxt_val = DFMiniMax(nxt_pos, depth, curr+1)
-                if curr == 0 and value < nxt_val:
-                    value, best_move = nxt_val, move
-                if curr >= 1 and value > nxt_val:
-                    value, best_move = nxt_val, move
+            for move in state.getLegalActions(agentIndex):
+                nxt_state = state.generateSuccessor(agentIndex, move)
+                nxt_move, nxt_value = DFMiniMax(nxt_state, depth, curr)
+                if agentIndex == 0 and value < nxt_value:
+                    value, best_move = nxt_value, move
+                if agentIndex >= 1 and value > nxt_value:
+                    value, best_move = nxt_value, move
             return best_move, value
 
         return DFMiniMax(gameState)[0]
-
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
