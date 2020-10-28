@@ -116,6 +116,7 @@ class ReflexAgent(Agent):
 
         return score
 
+
 def scoreEvaluationFunction(currentGameState):
     """
     This default evaluation function just returns the score of the state.
@@ -125,6 +126,7 @@ def scoreEvaluationFunction(currentGameState):
     (not reflex agents).
     """
     return currentGameState.getScore()
+
 
 class MultiAgentSearchAgent(Agent):
     """
@@ -178,10 +180,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
         numAgents = gameState.getNumAgents()
 
         def DFMiniMax(state, depth=self.depth, curr=0):
-            best_move = "Stop"
+            best_move = None
             if depth == 0 or state.isWin() or state.isLose():
-                return best_move, self.evaluationFunction(state)
-            if curr == numAgents:
+                return "Stop", self.evaluationFunction(state)
+            if curr % numAgents == 0:
                 curr = 0
             if curr == 0:
                 # Pacman
@@ -195,7 +197,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 nxt_move, nxt_val = DFMiniMax(nxt_pos, depth, curr+1)
                 if curr == 0 and value < nxt_val:
                     value, best_move = nxt_val, move
-                elif curr >= 1 and value > nxt_val:
+                if curr >= 1 and value > nxt_val:
                     value, best_move = nxt_val, move
             return best_move, value
 
@@ -212,7 +214,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        numAgents = gameState.getNumAgents()
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -237,7 +240,64 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    pos = currentGameState.getPacmanPosition()
+    food = currentGameState.getFood()
+    ghostStates = currentGameState.getGhostStates()
+    scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+    capsules = currentGameState.getCapsules()
+
+    score = currentGameState.getScore()
+    # Check terminal
+    if currentGameState.isLose():
+        return -inf
+    if currentGameState.isWin():
+        return inf
+
+    # Check Wall
+    if currentGameState.hasWall(pos[0], pos[1]):
+        return -inf
+
+    # Check ghost
+    min_ghost_dis = inf
+    min_scared_ghost_dis = inf
+    for ghost in ghostStates:
+        ghost_dis = manhattanDistance(ghost.getPosition(), pos)
+        if not ghost.scaredTimer:
+            if ghost_dis < min_ghost_dis:
+                min_ghost_dis = ghost_dis
+        else:
+            if ghost_dis < min_scared_ghost_dis:
+                min_scared_ghost_dis = ghost_dis
+    if min_ghost_dis < 2:
+        return -inf
+    if min_scared_ghost_dis == inf:
+        min_scared_ghost_dis = 0
+    score += sqrt(min_ghost_dis)
+    score += min_scared_ghost_dis
+
+    # Check Food
+    min_food_dis = inf
+    max_food_dis = -inf
+    food = food.asList()
+    for food_pos in food:
+        food_dis = manhattanDistance(food_pos, pos)
+        if food_dis < min_food_dis:
+            min_food_dis = food_dis
+        if food_dis > max_food_dis:
+            max_food_dis = food_dis
+    score -= min_food_dis
+    score += sqrt(max_food_dis)
+
+    # Check Capsule
+    score -= len(capsules)
+
+    # Check Scare time
+    scare_time = 0
+    for t in scaredTimes:
+        scare_time += t
+    score += scare_time
+
+    return score
 
 # Abbreviation
 better = betterEvaluationFunction
