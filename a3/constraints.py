@@ -120,7 +120,14 @@ class QueensTableConstraint(TableConstraint):
     #the existing function signatures.
     def __init__(self, name, qi, qj, i, j):
         self._name = "Queen_" + name
-        util.raiseNotDefined()
+        scope = [qi, qj]
+        satisfyingAssignments = []
+        for ci in qj.domain():
+            for cj in qj.domain():
+                if (ci != cj) and (abs(i - j) != abs(ci - cj)):
+                    satisfyingAssignments.append([ci, cj])
+        TableConstraint.__init__(self, name, scope, satisfyingAssignments)
+
 
 class NeqConstraint(Constraint):
     '''Neq constraint between two variables'''
@@ -271,7 +278,13 @@ class NValuesConstraint(Constraint):
         self._ub = upper_bound
 
     def check(self):
-        util.raiseNotDefined()
+        numAssigned = 0
+        for var in self.scope():
+            if var.isAssigned() and var in self._required:
+                numAssigned += 1
+            if not var.isAssigned:
+                return True
+        return self._lb <= numAssigned <= self._ub
 
     def hasSupport(self, var, val):
         '''check if var=val has an extension to an assignment of the
@@ -281,4 +294,26 @@ class NValuesConstraint(Constraint):
                  a similar approach is applicable here (but of course
                  there are other ways as well)
         '''
-        util.raiseNotDefined()
+        if var not in self.scope():
+            return True
+
+        def satisfying_b(l):
+            vals = [val for (var, val) in l]
+            res = 0
+            for val in vals:
+                if val in self._required:
+                    res += 1
+            return self._ub >= res >= self._lb
+
+        def satisfying_lb(l):
+            vals = [val for (var, val) in l]
+            res = 0
+            for val in vals:
+                if val in self._required:
+                    res += 1
+            return res <= self._ub
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], satisfying_b, satisfying_lb)
+        return x

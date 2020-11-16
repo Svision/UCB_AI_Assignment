@@ -172,8 +172,29 @@ def FC(unAssignedVars, csp, allSolutions, trace):
     #you must not change the function parameters.
     #Implementing handling of the trace parameter is optional
     #but it can be useful for debugging
+    if unAssignedVars.empty():
+        return checkEmpty(csp)
 
-    util.raiseNotDefined()
+    var = unAssignedVars.extract()
+    all_solutions = []
+    for val in var.curDomain():
+        var.setValue(val)
+        noDWO = True
+        for constraint in csp.constraintsOf(var):
+            if constraint.numUnassigned() == 1:
+                if FCCheck(constraint, var, val) == "DWO":
+                    noDWO = False
+                    break
+        if noDWO:
+            curr_solution = FC(unAssignedVars, csp, allSolutions, trace)
+            all_solutions.extend(curr_solution)
+            if not allSolutions and len(all_solutions) != 0:
+                Variable.restoreValues(var, val)
+                break
+        Variable.restoreValues(var, val)
+    var.unAssign()
+    unAssignedVars.insert(var)
+    return all_solutions
 
 def GacEnforce(constraints, csp, reasonVar, reasonVal):
     '''Establish GAC on constraints by pruning values
@@ -183,7 +204,24 @@ def GacEnforce(constraints, csp, reasonVar, reasonVal):
     #your implementation for Question 3 goes in this function body
     #you must not change the function parameters
     #ensure that you return one of "OK" or "DWO"
-    util.raiseNotDefined()
+
+    # initialize cnstrs to Queue
+    cnstrs = Queue()
+    for constraint in constraints:
+        cnstrs.insert(constraint)
+
+    while not cnstrs.empty():
+        cnstr = cnstrs.extract()
+        for var in cnstr.scope():
+            for val in var.curDomain():
+                if not cnstr.hasSupport(var, val):
+                    var.pruneValue(val, reasonVar, reasonVal)
+                    if var.curDomainSize() == 0:
+                        return "DWO"
+                    for recheck in csp.constraintsOf(var):
+                        if recheck != cnstr and not recheck in cnstrs.list:
+                            cnstrs.insert(recheck)
+    return "OK"
 
 def GAC(unAssignedVars, csp, allSolutions, trace):
     '''GAC search.
@@ -205,4 +243,45 @@ def GAC(unAssignedVars, csp, allSolutions, trace):
     #implementing support for "trace" is optional, but it might
     #help you in debugging
 
-    util.raiseNotDefined()
+    if unAssignedVars.empty():
+        return checkEmpty(csp)
+
+    all_solutions = []
+    var = unAssignedVars.extract()
+    for val in var.curDomain():
+        var.setValue(val)
+        noDWO = True
+        if GacEnforce(csp.constraintsOf(var), csp, var, val) == "DWO":
+            noDWO = False
+        if noDWO:
+            solution = GAC(unAssignedVars, csp, allSolutions, trace)
+            all_solutions.extend(solution)
+            if not allSolutions and len(all_solutions) != 0:
+                Variable.restoreValues(var, val)
+                break
+        Variable.restoreValues(var, val)
+    var.unAssign()
+    unAssignedVars.insert(var)
+    return all_solutions
+
+
+def checkEmpty(csp):
+    solutions = []
+    for variable in csp.variables():
+        sol = (variable, variable.getValue())
+        solutions.append(sol)
+    return [solutions]
+
+
+class Queue:
+    def __init__(self):
+        self.list = []
+
+    def insert(self, item):
+        self.list.insert(0, item)
+
+    def extract(self):
+        return self.list.pop()
+
+    def empty(self):
+        return len(self.list) == 0
