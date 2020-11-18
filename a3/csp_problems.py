@@ -334,9 +334,53 @@ def solve_planes(planes_problem, algo, allsolns,
     '''
 
     #BUILD your CSP here and store it in the varable csp
-    util.raiseNotDefined()
+    def plane_csp(planeProblem):
+        # planes = planeProblem.planes.copy()
+        variables = []
+        cnstrs = []
+        required = [0]
+        required.extend(planeProblem.maintenance_flights)
+        i = 0
+        while i < len(planeProblem.planes):
+            variables.append([])
+            domain = [0]
+            domain.extend(planeProblem._can_fly[planeProblem.planes[i]])
+            j = 0
+            while j < len(planeProblem._can_fly[planeProblem.planes[i]]):
+                name = str(planeProblem.planes[i]) + ", " + str(j)
+                variables[i].append(Variable(name, domain))
+                j += 1
+            i += 1
 
-    csp = None #set to to your CSP 
+        valids = [[0, 0]]
+        for flight in planeProblem.flights:
+            valid = [flight, 0]
+            valids.append(valid)
+        for follow in planeProblem.can_follow:
+            valids.append(list(follow))
+
+        for i in range(len(variables)):
+            init_flight = variables[i][0]
+            valid = [[0]]
+            for j in range(len(variables[i])-1):
+                name = str(variables[i]) + " flights follow"
+                cnstr = TableConstraint(name, [variables[i][j], variables[i][j+1]], valids)
+                cnstrs.extend([cnstr])
+            for startPlane in planeProblem._flights_at_start[planeProblem.planes[i]]:
+                valid.append([startPlane])
+            name = str(init_flight) + " valid init flight"
+            cnstr = TableConstraint(name, [init_flight], valid)
+            cnstrs.extend([cnstr])
+            for j in range(len(variables[i]) - planeProblem.min_maintenance_frequency + 1):
+                name = str(variables[i]) + " maintain"
+                cnstr = NValuesConstraint(name, variables[i][j:j+planeProblem.min_maintenance_frequency], required, 1,
+                                          planeProblem.min_maintenance_frequency)
+                cnstrs.extend([cnstr])
+        variables = [var for row in variables for var in row]
+        return CSP("planeSchedule", variables, cnstrs)
+
+
+    csp = plane_csp(planes_problem) #set to to your CSP
     #invoke search with the passed parameters
     solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace)
 
@@ -345,5 +389,35 @@ def solve_planes(planes_problem, algo, allsolns,
 
     #then return a list containing all converted solutions
     #(i.e., a list of lists of lists)
+    all_solutions = []
+    if not len(solutions):
+        if not silent:
+            print("No solutions founded")
+    else:
+        for s in solutions:
+            single_solution = []
+            sol = {}
+            for (var, val) in s:
+                plane_name = var.name().split(',')[0]
+                position = var.name().split(',')[1]
+                if plane_name in sol:
+                    sol[plane_name].append([position, val])
+                else:
+                    sol[plane_name] = []
+                    sol[plane_name].append([position, val])
+            keys = sol.keys()
+            keys = sorted(list(keys))
+            for key in keys:
+                lst = [key]
+                seq = sol[key]
+                for pos in seq:
+                    flight = pos[1]
+                    if flight != 0:
+                        lst.append(flight)
+                single_solution.append(lst)
+            all_solutions.append(single_solution)
+
+    return all_solutions
+
 
 
