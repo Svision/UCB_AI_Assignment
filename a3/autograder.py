@@ -698,7 +698,7 @@ def question_6():
     def timeout_handler(signum, frame):   # Custom signal handler
         raise TimeoutException
     signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(120)
+    signal.alarm(300)
     #signal.alarm(10)
     try:
         do_test(7, "python plane_scheduling.py -a GAC 7 -c", p7, 192)
