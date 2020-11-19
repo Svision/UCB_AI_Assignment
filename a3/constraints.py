@@ -317,3 +317,100 @@ class NValuesConstraint(Constraint):
         varsToAssign.remove(var)
         x = findvals(varsToAssign, [(var, val)], satisfying_b, satisfying_lb)
         return x
+
+# q6
+
+
+def _check_cover(f, _f):
+    res = 0
+    tmp = []
+    for a in _f:
+        if a not in tmp:
+            tmp.append(a)
+            res += 1
+    return len(f) < res
+
+
+def _potential(s, f):
+    a, b = 0, 0
+    t1, t2 = [], []
+    for tmp in s:
+        if tmp not in t1:
+            t1.append(tmp)
+            a += 1
+    for tmp in f:
+        if tmp not in t2:
+            t2.append(tmp)
+            b += 1
+    return b <= a
+
+
+class CoverAll(Constraint):
+    def __init__(self, name, scope, values):
+        Constraint.__init__(self, name, scope)
+        self._name = "cover all " + name
+        self._scope = scope
+        self._flights = values
+
+    def check(self):
+        flights = {}
+        notCoverAll = True
+        for var in self.scope():
+            if not var.isAssigned():
+                return notCoverAll
+            else:
+                flight = var.getValue()
+                if flight == 0:
+                    continue
+                else:
+                    check_dict = flights.keys()
+                    if flight not in check_dict:
+                        flights[flight] = 1
+                    else:
+                        flights[flight] += 1
+        if _check_cover(flights, self._flights):
+            notCoverAll = False
+            return notCoverAll
+        for value in flights.values():
+            if value > 1:
+                notCoverAll = False
+                return notCoverAll
+        return notCoverAll
+
+    def hasSupport(self, var, val):
+        flag = True
+        for v in self.scope():
+            if v == var:
+                flag = False
+
+        def satisfying_cover(l):
+            flag = True
+            cover = {}
+            vals = [val for (var, val) in l]
+            for val in vals:
+                if val == 0:
+                    continue
+                else:
+                    if val not in cover:
+                        cover[val] = 1
+                    else:
+                        cover[val] += 1
+            if _check_cover(cover, self._flights):
+                flag = False
+                return flag
+            for v in cover.values():
+                if v > 1:
+                    flag = False
+                    return flag
+            return flag
+
+        def potential(l):
+            return len(set(self._flights)) <= len(set(self.scope()))
+
+        if flag:
+            return flag
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], satisfying_cover, potential)
+        return x
