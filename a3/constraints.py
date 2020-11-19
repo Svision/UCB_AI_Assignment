@@ -346,35 +346,38 @@ def _potential(s, f):
 
 
 class CoverAll(Constraint):
-    def __init__(self, name, scope, values):
-        Constraint.__init__(self, name, scope)
-        self._name = "cover all " + name
+    def __init__(self, scope, values):
+        Constraint.__init__(self, "cover all ", scope)
         self._scope = scope
         self._flights = values
+        self._check = {}
 
     def check(self):
-        flights = {}
         notCoverAll = True
         for var in self.scope():
             if not var.isAssigned():
+                self._check = {}
                 return notCoverAll
             else:
                 flight = var.getValue()
                 if flight == 0:
                     continue
                 else:
-                    check_dict = flights.keys()
+                    check_dict = self._check.keys()
                     if flight not in check_dict:
-                        flights[flight] = 1
+                        self._check[flight] = 1
                     else:
-                        flights[flight] += 1
-        if _check_cover(flights, self._flights):
+                        self._check[flight] += 1
+        if _check_cover(self._check, self._flights):
             notCoverAll = False
+            self._check = {}
             return notCoverAll
-        for value in flights.values():
+        for value in self._check.values():
             if value > 1:
                 notCoverAll = False
+                self._check = {}
                 return notCoverAll
+        self._check = {}
         return notCoverAll
 
     def hasSupport(self, var, val):

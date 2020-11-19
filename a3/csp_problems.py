@@ -333,7 +333,6 @@ def solve_planes(planes_problem, algo, allsolns,
        plane.
     '''
 
-    #BUILD your CSP here and store it in the varable csp
     variables = []
     cnstrs = []
     required = [0]
@@ -357,8 +356,8 @@ def solve_planes(planes_problem, algo, allsolns,
     for follow in planes_problem.can_follow:
         valids.append(list(follow))
 
-    for i in range(len(variables)):
-        init_flight = variables[i][0]
+    i = 0
+    while i < len(variables):
         valid = [[0]]
         for j in range(len(variables[i]) - 1):
             name = str(variables[i]) + " flights follow"
@@ -366,30 +365,24 @@ def solve_planes(planes_problem, algo, allsolns,
             cnstrs.extend([cnstr])
         for startPlane in planes_problem._flights_at_start[planes_problem.planes[i]]:
             valid.append([startPlane])
-        name = str(init_flight) + " valid init flight"
-        cnstr = TableConstraint(name, [init_flight], valid)
+        name = str(variables[i][0]) + " valid init flight"
+        cnstr = TableConstraint(name, [variables[i][0]], valid)
         cnstrs.extend([cnstr])
         for j in range(len(variables[i]) - planes_problem.min_maintenance_frequency + 1):
             name = str(variables[i]) + " maintain"
             cnstr = NValuesConstraint(name, variables[i][j:j + planes_problem.min_maintenance_frequency], required, 1,
                                       planes_problem.min_maintenance_frequency)
             cnstrs.extend([cnstr])
+        i += 1
     tmp = []
     for v in variables:
         for vv in v:
             tmp.append(vv)
     variables = tmp
-    cnstrs.extend([CoverAll("cover all flight", variables, planes_problem.flights)])
+    cnstrs.extend([CoverAll(variables, planes_problem.flights)])
 
-    csp = CSP("planeSchedule", variables, cnstrs) #set to to your CSP
-    #invoke search with the passed parameters
+    csp = CSP("planeSchedule", variables, cnstrs)
     solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace)
-
-    #Convert each solution into a list of lists specifying a schedule
-    #for each plane in the format described above.
-
-    #then return a list containing all converted solutions
-    #(i.e., a list of lists of lists)
 
     if not len(solutions):
         return []
@@ -408,8 +401,8 @@ def solve_planes(planes_problem, algo, allsolns,
             for pos in s[k]:
                 if pos[1] != 0:
                     tmp_l.append(pos[1])
-            tmp.append(tmp_l)
-        res.append(tmp)
+            tmp.extend([tmp_l])
+        res.extend([tmp])
     return res
 
 
