@@ -297,8 +297,8 @@ class ExactInference(InferenceModule):
         pacmanPosition = gameState.getPacmanPosition()
         jailPosition = self.getJailPosition()
         for ghostPosition in self.allPositions:
-            likelihood = self.getObservationProb(observation, pacmanPosition, ghostPosition, jailPosition)
-            self.beliefs[ghostPosition] = likelihood * self.beliefs[ghostPosition]
+            probability = self.getObservationProb(observation, pacmanPosition, ghostPosition, jailPosition)
+            self.beliefs[ghostPosition] = probability * self.beliefs[ghostPosition]
         self.beliefs.normalize()
 
     def elapseTime(self, gameState):
@@ -312,10 +312,10 @@ class ExactInference(InferenceModule):
         """
         "*** YOUR CODE HERE ***"
         discreteDistribution = DiscreteDistribution()
-        for pos in self.allPositions:
-            positionDistribution = self.getPositionDistribution(gameState, pos)
-            for position in positionDistribution:
-                discreteDistribution[position] += self.beliefs[pos] * positionDistribution[position]
+        for oldPos in self.allPositions:
+            newPosDist = self.getPositionDistribution(gameState, oldPos)
+            for position in newPosDist:
+                discreteDistribution[position] += self.beliefs[oldPos] * newPosDist[position]
         self.beliefs = discreteDistribution
 
     def getBeliefDistribution(self):
@@ -380,10 +380,10 @@ class ParticleFilter(InferenceModule):
         "*** YOUR CODE HERE ***"
         beliefs = self.getBeliefDistribution()
         discreteDistribution = DiscreteDistribution()
-        for position in self.legalPositions:
-            new = self.getPositionDistribution(gameState, position)
-            for item in new.items():
-                discreteDistribution[item[0]] += beliefs[position] * item[1]
+        for oldPos in self.legalPositions:
+            newPosDist = self.getPositionDistribution(gameState, oldPos)
+            for item in newPosDist.items():
+                discreteDistribution[item[0]] += beliefs[oldPos] * item[1]
         self.particles = [discreteDistribution.sample() for _ in range(self.numParticles)]
 
     def getBeliefDistribution(self):
@@ -467,7 +467,25 @@ class JointParticleFilter(ParticleFilter):
 
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        pacmanPosition = gameState.getPacmanPosition()
+
+        discreteDistribution = DiscreteDistribution()
+        for particle in self.particles:
+            probability = 1.0
+            for i in range(self.numGhosts):
+                jailPosition = self.getJailPosition(i)
+                if observation[i] is None:
+                    particle = _tuple_set_helper(particle, jailPosition, i)
+                    probability = 0.0
+                else:
+                    probability = probability * self.getObservationProb(observation[i], pacmanPosition, particle[i],
+                                                                        jailPosition)
+            discreteDistribution[particle] += probability
+        discreteDistribution.normalize()
+        if not discreteDistribution.total():
+            self.initializeUniformly(gameState)
+            discreteDistribution = self.getBeliefDistribution()
+        self.particles = [discreteDistribution.sample() for _ in range(self.numParticles)]
 
     def elapseTime(self, gameState):
         """
@@ -480,8 +498,9 @@ class JointParticleFilter(ParticleFilter):
 
             # now loop through and update each entry in newParticle...
             "*** YOUR CODE HERE ***"
-            raiseNotDefined()
-
+            for i in range(self.numGhosts):
+                newPosDist = self.getPositionDistribution(gameState, oldParticle, i, self.ghostAgents[i])
+                newParticle[i] = newPosDist
             """*** END YOUR CODE HERE ***"""
             newParticles.append(tuple(newParticle))
         self.particles = newParticles
@@ -528,3 +547,9 @@ class MarginalInference(InferenceModule):
         for t, prob in jointDistribution.items():
             dist[t[self.index - 1]] += prob
         return dist
+
+
+def _tuple_set_helper(origin, value, i):
+    origin = list(origin)
+    origin[i] = value
+    return tuple(origin)

@@ -152,7 +152,8 @@ class GreedyBustersAgent(BustersAgent):
                 target = ghost.argMax()
         flag, result = None, None
         for action in legal:
-            dist = self.distancer.getDistance(Actions.getSuccessor(pacmanPosition, action), target)
+            successorPosition = Actions.getSuccessor(pacmanPosition, action)
+            dist = self.distancer.getDistance(successorPosition, target)
             if flag is None or dist < flag:
                 flag = dist
                 result = action
